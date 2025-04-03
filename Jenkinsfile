@@ -46,7 +46,7 @@ pipeline {
         
         stage('Test') {
             steps {
-                sh 'mvn test -DPOSTGRES_URL=jdbc:postgresql://localhost:15432/petclinic'
+                sh 'mvn test -DPOSTGRES_URL=jdbc:postgresql://localhost:15432/petclinic -Dspring.docker.compose.skip.in-tests=true -Dspring.profiles.active=postgres'
             }
             post {
                 always {
