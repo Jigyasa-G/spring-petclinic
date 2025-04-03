@@ -25,6 +25,10 @@ RUN apt-get update && \
 RUN apt-get update && \
     apt-get install -y ansible
 
+# Install Ansible and sshpass
+RUN apt-get update && \
+    apt-get install -y ansible sshpass
+
 # Install Jenkins plugins
 RUN jenkins-plugin-cli --plugins "blueocean docker-workflow ansible"
 
