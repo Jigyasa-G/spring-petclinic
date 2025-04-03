@@ -1,2 +1,5 @@
 [production]
 172.16.104.136 ansible_user=devop ansible_ssh_pass=password ansible_become_pass=password
+
+[all:vars]
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'
