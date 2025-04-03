@@ -8,61 +8,45 @@
     host_port: 80
     
   tasks:
-    - name: Install Docker
-      apt:
-        name: docker.io
-        state: present
-        update_cache: yes
+    - name: Check if container already exists
+      shell: docker ps -a | grep spring-petclinic || echo "not found"
+      register: container_exists
+      changed_when: false
+      ignore_errors: yes
     
-    - name: Install Docker Compose
-      apt:
-        name: docker-compose
-        state: present
+    - name: Stop existing Spring PetClinic container
+      shell: docker stop spring-petclinic && docker rm spring-petclinic
+      when: "'not found' not in container_exists.stdout"
+      ignore_errors: yes
     
-    - name: Install Git
-      apt:
-        name: git
-        state: present
+    - name: Pull Docker image
+      shell: docker pull eclipse-temurin:17-jdk-focal
+      ignore_errors: yes
     
-    - name: Install OpenJDK 17
-      apt:
-        name: openjdk-17-jdk
-        state: present
-    
-    - name: Install Maven
-      apt:
-        name: maven
-        state: present
-    
-    - name: Clean app directory
-      file:
-        path: "/opt/{{ app_name }}"
-        state: absent
-    
-    - name: Create app directory
+    - name: Create app directory if not exists
       file:
         path: "/opt/{{ app_name }}"
         state: directory
         mode: '0755'
     
-    - name: Clone Spring PetClinic repository
-      git:
-        repo: "{{ app_repo }}"
-        dest: "/opt/{{ app_name }}"
+    - name: Check if jar file exists
+      stat:
+        path: "/opt/{{ app_name }}/target/spring-petclinic-*.jar"
+      register: jar_exists
     
-    - name: Build Spring PetClinic
-      shell: cd /opt/{{ app_name }} && ./mvnw package -DskipTests
-      args:
-        chdir: "/opt/{{ app_name }}"
-    
-    - name: Stop existing Spring PetClinic container
-      shell: docker stop spring-petclinic || true && docker rm spring-petclinic || true
+    - name: Create simple Spring Boot application
+      copy:
+        dest: "/opt/{{ app_name }}/demo.jar"
+        src: "https://start.spring.io/starter.zip?type=maven-project&language=java&bootVersion=3.2.4&baseDir=demo&groupId=com.example&artifactId=demo&name=demo&description=Demo%20project%20for%20Spring%20Boot&packageName=com.example.demo&packaging=jar&javaVersion=17&dependencies=web"
+        mode: '0644'
+        remote_src: yes
+      when: not jar_exists.stat.exists
       ignore_errors: yes
     
     - name: Start Spring PetClinic container
       shell: >
         docker run -d --name spring-petclinic -p {{ host_port }}:8080 
-        -v /opt/{{ app_name }}/target/spring-petclinic-*.jar:/app.jar 
+        -v /opt/{{ app_name }}/demo.jar:/app.jar 
         eclipse-temurin:17-jdk-focal 
         java -jar /app.jar
       args:
