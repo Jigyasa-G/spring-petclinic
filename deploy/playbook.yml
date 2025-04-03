@@ -4,6 +4,7 @@
   become: yes
   vars:
     app_name: spring-petclinic
+    app_repo: https://github.com/spring-projects/spring-petclinic.git
     host_port: 80
     
   tasks:
@@ -18,26 +19,47 @@
         name: docker-compose
         state: present
     
+    - name: Install Git
+      apt:
+        name: git
+        state: present
+    
+    - name: Install OpenJDK 17
+      apt:
+        name: openjdk-17-jdk
+        state: present
+    
+    - name: Install Maven
+      apt:
+        name: maven
+        state: present
+    
     - name: Create app directory
       file:
         path: "/opt/{{ app_name }}"
         state: directory
         mode: '0755'
     
-    - name: Create a simple deployment script
-      copy:
-        content: |
-          #!/bin/bash
-          docker run -d --name spring-petclinic -p 80:8080 eclipse-temurin:17-jdk-focal java -jar /app/spring-petclinic.jar
-        dest: "/opt/{{ app_name }}/deploy.sh"
-        mode: '0755'
+    - name: Clone Spring PetClinic repository
+      git:
+        repo: "{{ app_repo }}"
+        dest: "/opt/{{ app_name }}"
+        force: yes
     
-    - name: Stop existing containers
-      shell: docker ps -aq | xargs -r docker stop | xargs -r docker rm
+    - name: Build Spring PetClinic
+      shell: cd /opt/{{ app_name }} && ./mvnw package -DskipTests
+      args:
+        chdir: "/opt/{{ app_name }}"
+    
+    - name: Stop existing Spring PetClinic container
+      shell: docker stop spring-petclinic || true && docker rm spring-petclinic || true
       ignore_errors: yes
     
-    - name: Pull base Java image
-      shell: docker pull eclipse-temurin:17-jdk-focal
-    
-    - name: Run deployment script
-      shell: cd /opt/{{ app_name }} && ./deploy.sh
+    - name: Start Spring PetClinic container
+      shell: >
+        docker run -d --name spring-petclinic -p {{ host_port }}:8080 
+        -v /opt/{{ app_name }}/target/spring-petclinic-*.jar:/app.jar 
+        eclipse-temurin:17-jdk-focal 
+        java -jar /app.jar
+      args:
+        chdir: "/opt/{{ app_name }}"
