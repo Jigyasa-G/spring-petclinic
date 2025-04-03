@@ -34,6 +34,11 @@
         name: maven
         state: present
     
+    - name: Clean app directory
+      file:
+        path: "/opt/{{ app_name }}"
+        state: absent
+    
     - name: Create app directory
       file:
         path: "/opt/{{ app_name }}"
@@ -44,7 +49,6 @@
       git:
         repo: "{{ app_repo }}"
         dest: "/opt/{{ app_name }}"
-        force: yes
     
     - name: Build Spring PetClinic
       shell: cd /opt/{{ app_name }} && ./mvnw package -DskipTests
