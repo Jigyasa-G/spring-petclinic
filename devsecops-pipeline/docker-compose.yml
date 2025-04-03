@@ -6,7 +6,9 @@ networks:
 
 services:
   jenkins:
-    image: jenkins/jenkins:lts
+    build: 
+      context: .
+      dockerfile: jenkins.Dockerfile
     privileged: true
     user: root
     ports:
@@ -18,7 +20,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - devsecops-network
-
   sonarqube:
     image: sonarqube:lts
     container_name: sonarqube
