@@ -26,11 +26,22 @@
         state: directory
         mode: '0755'
     
-    - name: Copy JAR file to server
+    - name: Copy JAR file from local build
       copy:
-        src: "../target/spring-petclinic-{{ lookup('env', 'BUILD_NUMBER') }}.jar"
+        src: "../target/spring-petclinic-{{ build_number }}.jar"
         dest: "/opt/{{ app_name }}/spring-petclinic.jar"
         mode: '0644'
+      ignore_errors: yes
+    
+    # Alternative if JAR file doesn't exist
+    - name: Copy Docker image instead
+      shell: docker save spring-petclinic:{{ build_number }} | ssh devop@172.16.104.136 "cat > /tmp/spring-petclinic.tar"
+      delegate_to: localhost
+      ignore_errors: yes
+    
+    - name: Load Docker image on remote
+      shell: docker load -i /tmp/spring-petclinic.tar
+      ignore_errors: yes
     
     - name: Create docker-compose.yml
       copy:
@@ -39,12 +50,9 @@
           services:
             spring-petclinic:
               container_name: {{ container_name }}
-              image: openjdk:11-jre-slim
-              volumes:
-                - /opt/{{ app_name }}/spring-petclinic.jar:/app.jar
+              image: spring-petclinic:{{ build_number }}
               ports:
                 - "{{ host_port }}:{{ container_port }}"
-              command: ["java", "-jar", "/app.jar"]
         dest: "/opt/{{ app_name }}/docker-compose.yml"
     
     - name: Stop existing container
