@@ -4,10 +4,18 @@
   become: yes
   vars:
     app_name: spring-petclinic
-    app_repo: https://github.com/spring-projects/spring-petclinic.git
+    container_name: spring-petclinic
+    container_port: 8080
     host_port: 80
     
   tasks:
+    - name: Install Docker
+      apt:
+        name: docker.io
+        state: present
+        update_cache: yes
+      ignore_errors: yes
+    
     - name: Check if container already exists
       shell: docker ps -a | grep spring-petclinic || echo "not found"
       register: container_exists
@@ -19,35 +27,39 @@
       when: "'not found' not in container_exists.stdout"
       ignore_errors: yes
     
-    - name: Pull Docker image
-      shell: docker pull eclipse-temurin:17-jdk-focal
-      ignore_errors: yes
-    
-    - name: Create app directory if not exists
+    - name: Create temporary directory for Docker image transfer
       file:
-        path: "/opt/{{ app_name }}"
+        path: /tmp/petclinic-transfer
         state: directory
         mode: '0755'
     
-    - name: Check if jar file exists
-      stat:
-        path: "/opt/{{ app_name }}/target/spring-petclinic-*.jar"
-      register: jar_exists
+    - name: Save Docker image
+      shell: docker save spring-petclinic:{{ build_number }} -o /tmp/petclinic-image.tar
+      delegate_to: localhost
     
-    - name: Create simple Spring Boot application
+    - name: Copy Docker image to remote
       copy:
-        dest: "/opt/{{ app_name }}/demo.jar"
-        src: "https://start.spring.io/starter.zip?type=maven-project&language=java&bootVersion=3.2.4&baseDir=demo&groupId=com.example&artifactId=demo&name=demo&description=Demo%20project%20for%20Spring%20Boot&packageName=com.example.demo&packaging=jar&javaVersion=17&dependencies=web"
-        mode: '0644'
-        remote_src: yes
-      when: not jar_exists.stat.exists
-      ignore_errors: yes
+        src: /tmp/petclinic-image.tar
+        dest: /tmp/petclinic-transfer/petclinic-image.tar
+    
+    - name: Load Docker image on remote
+      shell: docker load -i /tmp/petclinic-transfer/petclinic-image.tar
     
     - name: Start Spring PetClinic container
       shell: >
-        docker run -d --name spring-petclinic -p {{ host_port }}:8080 
-        -v /opt/{{ app_name }}/demo.jar:/app.jar 
-        eclipse-temurin:17-jdk-focal 
-        java -jar /app.jar
-      args:
-        chdir: "/opt/{{ app_name }}"
+        docker run -d --name spring-petclinic -p {{ host_port }}:{{ container_port }} 
+        spring-petclinic:{{ build_number }}
+    
+    - name: Clean up temporary files
+      file:
+        path: /tmp/petclinic-transfer
+        state: absent
+      
+    - name: Verify container is running
+      shell: docker ps | grep spring-petclinic
+      register: container_check
+      ignore_errors: yes
+    
+    - name: Container status
+      debug:
+        msg: "Container state: {{ 'running' if container_check.rc == 0 else 'not running' }}"
