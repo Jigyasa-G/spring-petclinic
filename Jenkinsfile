@@ -13,31 +13,6 @@ pipeline {
             }
         }
         
-        stage('Start PostgreSQL') {
-            steps {
-                sh '''
-                # Check if network exists, create if it doesn't
-                docker network inspect devsecops-network >/dev/null 2>&1 || docker network create devsecops-network
-                
-                # Stop any existing postgres container
-                docker stop postgres-test || true
-                docker rm postgres-test || true
-                
-                # Start a Postgres container for testing
-                docker run -d --name postgres-test \
-                  --network=devsecops-network \
-                  -p 15432:5432 \
-                  -e POSTGRES_USER=petclinic \
-                  -e POSTGRES_PASSWORD=petclinic \
-                  -e POSTGRES_DB=petclinic \
-                  postgres:17.0
-                  
-                # Give PostgreSQL time to initialize
-                sleep 10
-                '''
-            }
-        }
-        
         stage('Build') {
             steps {
                 sh 'mvn clean package -DskipTests'
@@ -46,18 +21,7 @@ pipeline {
         
         stage('Test') {
             steps {
-                sh '''
-                mvn test \
-                -DPOSTGRES_URL=jdbc:postgresql://localhost:15432/petclinic \
-                -Dspring.docker.compose.skip.in-tests=true \
-                -Dspring.profiles.active=postgres \
-                -Dspring.datasource.username=petclinic \
-                -Dspring.datasource.password=petclinic \
-                -Dspring.datasource.driver-class-name=org.postgresql.Driver \
-                -Dspring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect \
-                -Dspring.jpa.hibernate.ddl-auto=update \
-                -Dtest=!PostgresIntegrationTests
-                '''
+                sh 'mvn test -Dtest=!*Postgres*'
             }
             post {
                 always {
@@ -94,7 +58,6 @@ pipeline {
                 sh 'docker build -t spring-petclinic:${BUILD_NUMBER} .'
             }
         }
-        
         stage('OWASP ZAP Scan') {
             steps {
                 sh '''
@@ -141,7 +104,6 @@ pipeline {
                 }
             }
         }
-        
         stage('Deploy to Production') {
             steps {
                 ansiblePlaybook(
@@ -157,8 +119,6 @@ pipeline {
     
     post {
         always {
-            sh 'docker stop postgres-test || true'
-            sh 'docker rm postgres-test || true'
             cleanWs()
         }
     }
