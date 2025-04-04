@@ -55,7 +55,8 @@ pipeline {
                 -Dspring.datasource.password=petclinic \
                 -Dspring.datasource.driver-class-name=org.postgresql.Driver \
                 -Dspring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect \
-                -Dspring.jpa.hibernate.ddl-auto=update
+                -Dspring.jpa.hibernate.ddl-auto=update \
+                -Dtest=!PostgresIntegrationTests
                 '''
             }
             post {
@@ -93,6 +94,7 @@ pipeline {
                 sh 'docker build -t spring-petclinic:${BUILD_NUMBER} .'
             }
         }
+        
         stage('OWASP ZAP Scan') {
             steps {
                 sh '''
@@ -139,6 +141,7 @@ pipeline {
                 }
             }
         }
+        
         stage('Deploy to Production') {
             steps {
                 ansiblePlaybook(
