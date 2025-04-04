@@ -48,11 +48,6 @@
     - name: Start Spring PetClinic container
       shell: >
         docker run -d --name spring-petclinic -p {{ host_port }}:{{ container_port }}
-        -e SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/petclinic
-        -e SPRING_DATASOURCE_USERNAME=petclinic
-        -e SPRING_DATASOURCE_PASSWORD=petclinic
-        -e SPRING_JPA_HIBERNATE_DDL_AUTO=none
-        --network=devsecops-network
         spring-petclinic:{{ build_number }}
     
     - name: Clean up temporary files
