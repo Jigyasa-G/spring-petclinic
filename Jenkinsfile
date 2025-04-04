@@ -26,7 +26,7 @@ pipeline {
                 # Start a Postgres container for testing
                 docker run -d --name postgres-test \
                   --network=devsecops-network \
-                  -p 15432:5432 \
+                  -p 5432:5432 \
                   -e POSTGRES_USER=petclinic \
                   -e POSTGRES_PASSWORD=petclinic \
                   -e POSTGRES_DB=petclinic \
@@ -46,7 +46,17 @@ pipeline {
         
         stage('Test') {
             steps {
-                sh 'mvn test -DPOSTGRES_URL=jdbc:postgresql://localhost:15432/petclinic -Dspring.docker.compose.skip.in-tests=true -Dspring.profiles.active=postgres'
+                sh '''
+                mvn test \
+                -DPOSTGRES_URL=jdbc:postgresql://localhost:15432/petclinic \
+                -Dspring.docker.compose.skip.in-tests=true \
+                -Dspring.profiles.active=postgres \
+                -Dspring.datasource.username=petclinic \
+                -Dspring.datasource.password=petclinic \
+                -Dspring.datasource.driver-class-name=org.postgresql.Driver \
+                -Dspring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect \
+                -Dspring.jpa.hibernate.ddl-auto=update
+                '''
             }
             post {
                 always {
