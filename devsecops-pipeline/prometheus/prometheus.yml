@@ -11,3 +11,12 @@ scrape_configs:
     metrics_path: /prometheus
     static_configs:
       - targets: ['jenkins:8080']
+      
+  - job_name: 'production'
+    static_configs:
+      - targets: ['172.16.104.136:9100']
+      
+  - job_name: 'spring-petclinic'
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ['172.16.104.136:80']

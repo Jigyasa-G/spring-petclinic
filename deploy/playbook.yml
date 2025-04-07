@@ -53,8 +53,7 @@
     - name: Clean up temporary files
       file:
         path: /tmp/petclinic-transfer
-        state: absent
-      
+        state: absent      
     - name: Verify container is running
       shell: docker ps | grep spring-petclinic
       register: container_check
