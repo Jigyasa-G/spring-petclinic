@@ -62,3 +62,19 @@
     - name: Container status
       debug:
         msg: "Container state: {{ 'running' if container_check.rc == 0 else 'not running' }}"
+        
+    # Install Node Exporter for server monitoring
+    - name: Check if node-exporter container exists
+      shell: docker ps -a | grep node-exporter || echo "not found"
+      register: exporter_exists
+      changed_when: false
+      
+    - name: Remove existing node-exporter container
+      shell: docker stop node-exporter && docker rm node-exporter
+      when: "'not found' not in exporter_exists.stdout"
+      ignore_errors: yes
+      
+    - name: Start node-exporter container
+      shell: >
+        docker run -d --name node-exporter -p 9100:9100
+        --restart always prom/node-exporter:latest
