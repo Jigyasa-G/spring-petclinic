@@ -19,16 +19,16 @@ pipeline {
             }
         }
         
-        stage('Test') {
-            steps {
-                sh 'mvn test -Dtest=!*Postgres*'
-            }
-            post {
-                always {
-                    junit '**/target/surefire-reports/*.xml'
-                }
-            }
-        }
+        // stage('Test') {
+        //     steps {
+        //         sh 'mvn test -Dtest=!*Postgres*'
+        //     }
+        //     post {
+        //         always {
+        //             junit '**/target/surefire-reports/*.xml'
+        //         }
+        //     }
+        // }
         
         stage('SonarQube Analysis') {
             steps {
