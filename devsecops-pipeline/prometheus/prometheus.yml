@@ -8,10 +8,10 @@ scrape_configs:
       - targets: ['localhost:9090']
 
   - job_name: 'jenkins'
-    metrics_path: /prometheus
+    metrics_path: '/prometheus/'
     static_configs:
       - targets: ['jenkins:8080']
-      
+
   - job_name: 'production'
     static_configs:
       - targets: ['172.16.104.136:9100']
